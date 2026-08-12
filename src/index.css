@@ -1,0 +1,57 @@
+@import url('https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    @apply bg-stone-bg text-charcoal;
+  }
+  body {
+    @apply font-sans antialiased;
+  }
+  h1, h2, h3, h4 {
+    @apply font-display;
+  }
+  /* Visible keyboard focus everywhere - accessibility floor */
+  :focus-visible {
+    outline: 2px solid theme('colors.oxblood.DEFAULT');
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  /* Ink-stamp status badge - the app's signature element */
+  .stamp {
+    @apply inline-flex items-center justify-center px-3 py-1 text-xs font-bold uppercase tracking-wider
+           border-2 rounded-sm -rotate-2 select-none;
+  }
+  .stamp-paid {
+    @apply stamp border-sage text-sage-dark bg-sage/10;
+  }
+  .stamp-pending {
+    @apply stamp border-mustard text-mustard-dark bg-mustard/10;
+  }
+  .stamp-cancelled {
+    @apply stamp border-charcoal/40 text-charcoal/50 bg-charcoal/5;
+  }
+
+  .btn-primary {
+    @apply bg-oxblood hover:bg-oxblood-dark text-white font-semibold px-5 py-2.5 rounded-md
+           transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-secondary {
+    @apply bg-transparent border-2 border-charcoal/20 hover:border-charcoal/40 text-charcoal
+           font-semibold px-5 py-2.5 rounded-md transition-colors;
+  }
+
+  .card {
+    @apply bg-stone-card border border-stone-line rounded-lg shadow-sm;
+  }
+
+  .input-field {
+    @apply w-full px-4 py-2.5 rounded-md border border-stone-line bg-white
+           focus:border-oxblood outline-none transition-colors;
+  }
+}
