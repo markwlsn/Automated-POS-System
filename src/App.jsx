@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+﻿import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import RoleRouter from './pages/RoleRouter'
@@ -7,6 +7,8 @@ import Signup from './pages/auth/Signup'
 import OwnerDashboard from './pages/owner/OwnerDashboard'
 import StaffPOS from './pages/staff/StaffPOS'
 import CustomerHome from './pages/customer/CustomerHome'
+import TestHooksDemo from './pages/TestHooksDemo'
+import TestComponentsDemo from './pages/TestComponentsDemo'
 
 export default function App() {
   return (
@@ -44,6 +46,10 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+
+          {/* Temporary test routes - remove after tasks verified */}
+          <Route path="/test-hooks" element={<TestHooksDemo />} />
+          <Route path="/test-components" element={<TestComponentsDemo />} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>

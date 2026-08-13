@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+﻿@import url('https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -53,5 +53,31 @@
   .input-field {
     @apply w-full px-4 py-2.5 rounded-md border border-stone-line bg-white
            focus:border-oxblood outline-none transition-colors;
+  }
+}
+
+/* Print styles for receipts */
+@media print {
+  @page {
+    size: 80mm auto;
+    margin: 0;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+  }
+
+  .print\:hidden {
+    display: none !important;
+  }
+
+  .receipt-content {
+    font-size: 12px;
+  }
+
+  /* Hide everything except the receipt modal */
+  body > *:not(.fixed) {
+    display: none !important;
   }
 }
