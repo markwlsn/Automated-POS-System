@@ -1,19 +1,11 @@
 import CartItemRow from './CartItemRow'
 import CartEmpty from './CartEmpty'
 import { formatCurrency, formatWeight } from '../utils/formatters'
+import { ORDER_RULES } from '../config'
 
 /**
  * CartSummary - Sticky cart panel with checkout actions
- * Shows cart items, totals, and proceed to payment button
- * 
- * @param {Array} cart - Array of cart items
- * @param {Function} onUpdateWeight - Callback to update item weight
- * @param {Function} onRemoveItem - Callback to remove item
- * @param {Function} onClearCart - Callback to clear entire cart
- * @param {Function} onCheckout - Callback when proceeding to payment
- * @param {number} totalWeight - Total weight of all items
- * @param {number} totalAmount - Total amount of all items
- * @param {Function} getStockForProduct - Callback to query max stock per product
+ * Shows cart items, totals, and proceed to payment button with POS law limits
  */
 export default function CartSummary({
   cart = [],
@@ -27,6 +19,19 @@ export default function CartSummary({
 }) {
   const itemCount = cart.length
   const isEmpty = itemCount === 0
+
+  const isBelowMin = !isEmpty && totalAmount < ORDER_RULES.MIN_ORDER_AMOUNT
+  const isAboveMax = totalAmount > ORDER_RULES.MAX_ORDER_AMOUNT
+  const canCheckout = !isEmpty && !isBelowMin && !isAboveMax
+
+  let checkoutButtonText = 'Proceed to Payment'
+  if (isEmpty) {
+    checkoutButtonText = 'Add Items to Proceed'
+  } else if (isBelowMin) {
+    checkoutButtonText = `Min. Order ${formatCurrency(ORDER_RULES.MIN_ORDER_AMOUNT)} Required`
+  } else if (isAboveMax) {
+    checkoutButtonText = `Exceeds Max Limit (${formatCurrency(ORDER_RULES.MAX_ORDER_AMOUNT)})`
+  }
 
   return (
     <div className="flex flex-col h-full bg-stone-card">
@@ -68,6 +73,29 @@ export default function CartSummary({
         )}
       </div>
 
+      {/* POS Rule Policy Notices */}
+      {isBelowMin && (
+        <div className="mx-4 mb-2 p-2.5 bg-amber-50 border border-amber-200 text-amber-900 rounded-md text-xs">
+          <div className="font-semibold flex items-center gap-1">
+            <span>⚠️</span> Store Minimum Order: {formatCurrency(ORDER_RULES.MIN_ORDER_AMOUNT)}
+          </div>
+          <div className="text-amber-700 mt-0.5">
+            Add {formatCurrency(ORDER_RULES.MIN_ORDER_AMOUNT - totalAmount)} more to meet store checkout policy.
+          </div>
+        </div>
+      )}
+
+      {isAboveMax && (
+        <div className="mx-4 mb-2 p-2.5 bg-red-50 border border-red-200 text-red-900 rounded-md text-xs">
+          <div className="font-semibold flex items-center gap-1">
+            <span>⛔</span> Exceeds Limit: {formatCurrency(ORDER_RULES.MAX_ORDER_AMOUNT)}
+          </div>
+          <div className="text-red-700 mt-0.5">
+            Maximum transaction limit is {formatCurrency(ORDER_RULES.MAX_ORDER_AMOUNT)}. Please split into multiple orders.
+          </div>
+        </div>
+      )}
+
       {/* Totals Summary */}
       {!isEmpty && (
         <div className="p-4 border-t border-stone-line bg-white space-y-2">
@@ -90,11 +118,13 @@ export default function CartSummary({
       <div className="p-4 border-t border-stone-line">
         <button
           onClick={onCheckout}
-          disabled={isEmpty}
-          className="btn-primary w-full py-4 text-lg"
-          aria-label={isEmpty ? 'Add items to proceed' : 'Proceed to payment'}
+          disabled={!canCheckout}
+          className={`btn-primary w-full py-4 text-base font-semibold ${
+            !canCheckout && !isEmpty ? 'opacity-50 cursor-not-allowed bg-charcoal/40 hover:bg-charcoal/40' : ''
+          }`}
+          aria-label={checkoutButtonText}
         >
-          {isEmpty ? 'Add Items to Proceed' : 'Proceed to Payment'}
+          {checkoutButtonText}
         </button>
       </div>
     </div>

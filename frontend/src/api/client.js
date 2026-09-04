@@ -176,6 +176,10 @@ export const ordersApi = {
   async getOrderById(id) {
     return request(`/orders/${id}`)
   },
+
+  async getOrderRules() {
+    return request('/orders/rules')
+  },
 }
 
 // -------------------------------------------------------------

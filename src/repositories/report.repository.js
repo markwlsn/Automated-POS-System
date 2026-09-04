@@ -1,8 +1,12 @@
 import { getDatabase } from '../db/index.js'
 
 export class ReportRepository {
-  constructor(db = getDatabase()) {
-    this.db = db
+  constructor(db = null) {
+    this._db = db
+  }
+
+  get db() {
+    return this._db || getDatabase()
   }
 
   getSummary({ shopId, branchId = null, startDate = null, endDate = null }) {

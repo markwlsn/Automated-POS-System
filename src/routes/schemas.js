@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { ORDER_RULES } from '../config/constants.js'
 
 export const signupSchema = z.object({
   email: z.string().email(),
@@ -26,7 +27,10 @@ export const updateStockSchema = z.object({
 
 export const orderItemSchema = z.object({
   productId: z.string().min(1, 'Product ID is required'),
-  weightKg: z.number().positive('Weight must be greater than 0'),
+  weightKg: z
+    .number()
+    .min(ORDER_RULES.MIN_ITEM_WEIGHT_KG, `Weight must be at least ${ORDER_RULES.MIN_ITEM_WEIGHT_KG} kg`)
+    .max(ORDER_RULES.MAX_ITEM_WEIGHT_KG, `Weight cannot exceed ${ORDER_RULES.MAX_ITEM_WEIGHT_KG} kg`),
 })
 
 export const createOrderSchema = z.object({

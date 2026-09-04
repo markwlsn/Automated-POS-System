@@ -10,7 +10,6 @@ export default function Signup() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState(null)
-  const [confirmationPending, setConfirmationPending] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
   async function handleSubmit(e) {
@@ -18,7 +17,7 @@ export default function Signup() {
     setError(null)
     setSubmitting(true)
 
-    const { data, error } = await signUp({ email, password, fullName, phoneNumber })
+    const { error } = await signUp({ email, password, fullName, phoneNumber })
 
     setSubmitting(false)
     if (error) {
@@ -26,30 +25,7 @@ export default function Signup() {
       return
     }
 
-    // If "Confirm email" is enabled in Supabase, there's no active
-    // session yet - the account exists but needs email confirmation
-    // before it can log in. Tell the user instead of silently
-    // redirecting them somewhere that won't work yet.
-    if (!data.session) {
-      setConfirmationPending(true)
-      return
-    }
-
     navigate('/')
-  }
-
-  if (confirmationPending) {
-    return (
-      <div className="min-h-screen flex items-center justify-center px-4">
-        <div className="card w-full max-w-sm p-8 text-center">
-          <h1 className="text-2xl font-bold mb-2">Check your email</h1>
-          <p className="text-charcoal/60">
-            We sent a confirmation link to <strong>{email}</strong>. Click it, then come back
-            and sign in.
-          </p>
-        </div>
-      </div>
-    )
   }
 
   return (

@@ -1,10 +1,11 @@
-import { getDatabase } from '../src/db/index.js'
+import { getDatabase, closeDatabase } from '../src/db/index.js'
 import { createApp } from '../src/app.js'
 import { runMigrations } from '../scripts/migrate.js'
 import { runSeeds } from '../scripts/seed.js'
 
 export async function setupTestApp() {
-  // Use in-memory SQLite database for isolated test execution
+  // Close any existing database instance and initialize fresh isolated DB
+  closeDatabase()
   const db = getDatabase(':memory:')
   await runMigrations(db)
   await runSeeds(db)
@@ -55,7 +56,10 @@ export async function setupTestApp() {
 
   function close() {
     return new Promise((resolve) => {
-      server.close(() => resolve())
+      server.close(() => {
+        closeDatabase()
+        resolve()
+      })
     })
   }
 

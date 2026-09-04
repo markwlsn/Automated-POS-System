@@ -141,4 +141,170 @@ describe('Orders & Checkout POS API', () => {
     assert.equal(searchRes.status, 200)
     assert.ok(searchRes.body.data.some(o => o.orderNumber === firstOrder.orderNumber))
   })
+
+  test('GET /api/v1/orders/rules returns standard POS shop limits', async () => {
+    const res = await ctx.request('GET', '/api/v1/orders/rules')
+    assert.equal(res.status, 200)
+    assert.equal(res.body.data.MIN_ORDER_AMOUNT, 50.0)
+    assert.equal(res.body.data.MAX_ORDER_AMOUNT, 50000.0)
+    assert.equal(res.body.data.MAX_DAILY_BRANCH_ORDERS, 500)
+    assert.equal(res.body.data.MAX_DAILY_CUSTOMER_ORDERS, 10)
+    assert.equal(res.body.data.MIN_ITEM_WEIGHT_KG, 0.05)
+    assert.equal(res.body.data.MAX_ITEM_WEIGHT_KG, 100.0)
+  })
+
+  test('POST /api/v1/orders rejects order if total is below MIN_ORDER_AMOUNT (₱50)', async () => {
+    // Pork Chop is ₱350/kg. 0.1 kg is ₱35.00 < ₱50.00
+    const res = await ctx.request('POST', '/api/v1/orders', {
+      token: staffToken,
+      body: {
+        branchId,
+        paymentMethod: 'cash',
+        cashReceived: 50.00,
+        items: [
+          {
+            productId: 'prod-pork-chop',
+            weightKg: 0.1, // ₱35.00
+          },
+        ],
+      },
+    })
+
+    assert.equal(res.status, 400)
+    assert.equal(res.body.error.code, 'ORDER_BELOW_MINIMUM')
+  })
+
+  test('POST /api/v1/orders rejects order if item weight is below MIN_ITEM_WEIGHT_KG (0.05 kg)', async () => {
+    const res = await ctx.request('POST', '/api/v1/orders', {
+      token: staffToken,
+      body: {
+        branchId,
+        paymentMethod: 'cash',
+        cashReceived: 100.00,
+        items: [
+          {
+            productId: 'prod-pork-chop',
+            weightKg: 0.02, // 20g < 50g
+          },
+        ],
+      },
+    })
+
+    assert.equal(res.status, 400)
+    assert.equal(res.body.error.code, 'VALIDATION_ERROR')
+  })
+
+  test('POST /api/v1/orders rejects order when daily customer order limit is reached', async () => {
+    // Get customer account id
+    const customerLogin = await ctx.request('POST', '/api/v1/auth/login', {
+      body: { email: 'customer@test.com', password: 'Password123!' },
+    })
+    const customerId = customerLogin.body.data.user.id
+
+    // Insert 10 mock completed orders for this customer today
+    const db = ctx.db
+    for (let i = 0; i < 10; i++) {
+      db.prepare(`
+        INSERT INTO orders (
+          id, shop_id, branch_id, customer_id, created_by, order_number,
+          order_type, fulfillment_type, status, total_amount, payment_method, payment_status, created_at
+        ) VALUES (
+          ?, '11111111-1111-1111-1111-111111111111', ?, ?, ?, ?,
+          'walk_in', 'pickup', 'completed', 100.00, 'cash', 'paid', datetime('now')
+        )
+      `).run(
+        `mock-cust-order-${i}-${Date.now()}`,
+        branchId,
+        customerId,
+        customerId,
+        `ORD-MOCK-CUST-${i}-${Date.now()}`
+      )
+    }
+
+    const res = await ctx.request('POST', '/api/v1/orders', {
+      token: staffToken,
+      body: {
+        branchId,
+        customerId,
+        paymentMethod: 'cash',
+        cashReceived: 500.00,
+        items: [
+          {
+            productId: 'prod-pork-chop',
+            weightKg: 1.0,
+          },
+        ],
+      },
+    })
+
+    assert.equal(res.status, 400)
+    assert.equal(res.body.error.code, 'CUSTOMER_DAILY_LIMIT_REACHED')
+  })
+
+  test('POST /api/v1/orders rejects order if total exceeds MAX_ORDER_AMOUNT (₱50,000)', async () => {
+    // Temporarily increase stock of ribeye (₱650/kg) to 100kg
+    ctx.db.prepare('UPDATE inventory SET stock_kg = 100 WHERE product_id = ? AND branch_id = ?')
+      .run('prod-beef-ribeye', branchId)
+
+    // 80 kg * 650 = ₱52,000.00 > ₱50,000.00
+    const res = await ctx.request('POST', '/api/v1/orders', {
+      token: staffToken,
+      body: {
+        branchId,
+        paymentMethod: 'cash',
+        cashReceived: 60000.00,
+        items: [
+          {
+            productId: 'prod-beef-ribeye',
+            weightKg: 80.0,
+          },
+        ],
+      },
+    })
+
+    assert.equal(res.status, 400)
+    assert.equal(res.body.error.code, 'ORDER_EXCEEDS_MAXIMUM')
+  })
+
+  test('POST /api/v1/orders rejects order when daily branch order limit is reached', async () => {
+    // Insert 500 mock orders for branch today
+    const db = ctx.db
+    const insertStmt = db.prepare(`
+      INSERT INTO orders (
+        id, shop_id, branch_id, customer_id, created_by, order_number,
+        order_type, fulfillment_type, status, total_amount, payment_method, payment_status, created_at
+      ) VALUES (
+        ?, '11111111-1111-1111-1111-111111111111', ?, NULL, NULL, ?,
+        'walk_in', 'pickup', 'completed', 100.00, 'cash', 'paid', datetime('now')
+      )
+    `)
+
+    db.exec('BEGIN TRANSACTION;')
+    for (let i = 0; i < 500; i++) {
+      insertStmt.run(
+        `mock-branch-order-${i}-${Date.now()}`,
+        branchId,
+        `ORD-MOCK-BRANCH-${i}-${Date.now()}`
+      )
+    }
+    db.exec('COMMIT;')
+
+    const res = await ctx.request('POST', '/api/v1/orders', {
+      token: staffToken,
+      body: {
+        branchId,
+        paymentMethod: 'cash',
+        cashReceived: 500.00,
+        items: [
+          {
+            productId: 'prod-pork-chop',
+            weightKg: 1.0,
+          },
+        ],
+      },
+    })
+
+    assert.equal(res.status, 400)
+    assert.equal(res.body.error.code, 'DAILY_ORDER_LIMIT_REACHED')
+  })
 })

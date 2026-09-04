@@ -60,3 +60,12 @@ export function getOrderById(req, res, next) {
     next(err)
   }
 }
+
+export function getOrderRules(req, res, next) {
+  try {
+    const rules = orderService.getOrderRules()
+    return res.success(rules)
+  } catch (err) {
+    next(err)
+  }
+}

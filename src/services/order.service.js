@@ -1,9 +1,18 @@
 import { OrderRepository } from '../repositories/order.repository.js'
 import { env } from '../config/env.js'
+import { ORDER_RULES, ERROR_CODES } from '../config/constants.js'
 
 export class OrderService {
   constructor(orderRepo = new OrderRepository()) {
     this.orderRepo = orderRepo
+  }
+
+  getOrderRules() {
+    return {
+      ...ORDER_RULES,
+      currency: 'PHP',
+      currencySymbol: '₱',
+    }
   }
 
   createOrder({
@@ -20,15 +29,24 @@ export class OrderService {
   }) {
     if (!items || items.length === 0) {
       const err = new Error('Order must contain at least one item')
-      err.code = 'VALIDATION_ERROR'
+      err.code = ERROR_CODES.VALIDATION_ERROR
       err.status = 400
       throw err
     }
 
     for (const item of items) {
-      if (!item.productId || typeof item.weightKg !== 'number' || item.weightKg <= 0) {
-        const err = new Error('Each order item must have a valid productId and weightKg > 0')
-        err.code = 'VALIDATION_ERROR'
+      if (!item.productId || typeof item.weightKg !== 'number') {
+        const err = new Error('Each order item must have a valid productId and weightKg')
+        err.code = ERROR_CODES.VALIDATION_ERROR
+        err.status = 400
+        throw err
+      }
+
+      if (item.weightKg < ORDER_RULES.MIN_ITEM_WEIGHT_KG || item.weightKg > ORDER_RULES.MAX_ITEM_WEIGHT_KG) {
+        const err = new Error(
+          `Item weight must be between ${ORDER_RULES.MIN_ITEM_WEIGHT_KG} kg and ${ORDER_RULES.MAX_ITEM_WEIGHT_KG} kg. Provided: ${item.weightKg} kg`
+        )
+        err.code = ERROR_CODES.INVALID_ITEM_WEIGHT
         err.status = 400
         throw err
       }

@@ -1,9 +1,12 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { useProducts } from '../../hooks/useProducts'
 import { useInventory } from '../../hooks/useInventory'
 import { useCart } from '../../hooks/useCart'
 import { useOrderSubmit } from '../../hooks/useOrderSubmit'
+import { queueApi } from '../../api/client'
+import { CURRENT_BRANCH_ID } from '../../config'
 import CategoryTabs from '../../components/CategoryTabs'
 import ProductCard from '../../components/ProductCard'
 import CartSummary from '../../components/CartSummary'
@@ -16,6 +19,7 @@ import OrderHistory from '../../components/OrderHistory'
 
 export default function StaffPOS() {
   const { profile, user, signOut } = useAuth()
+  const navigate = useNavigate()
   const { products, categories, loading: productsLoading } = useProducts()
   const { inventory, getStockForProduct, refetch: refetchInventory } = useInventory()
   const {
@@ -37,6 +41,40 @@ export default function StaffPOS() {
   const [checkoutStep, setCheckoutStep] = useState(null)
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null)
   const [completedOrder, setCompletedOrder] = useState(null)
+  const [queueData, setQueueData] = useState(null)
+  const [callingNext, setCallingNext] = useState(false)
+
+  useEffect(() => {
+    fetchQueue()
+    const interval = setInterval(fetchQueue, 10000)
+    return () => clearInterval(interval)
+  }, [])
+
+  async function fetchQueue() {
+    try {
+      const q = await queueApi.getQueue(CURRENT_BRANCH_ID)
+      setQueueData(q)
+    } catch {
+      // Ignore polling errors
+    }
+  }
+
+  async function handleCallNextTicket() {
+    if (!queueData?.waitingTickets || queueData.waitingTickets.length === 0) {
+      alert('No customers are currently waiting in the queue.')
+      return
+    }
+    const nextTicket = queueData.waitingTickets[0]
+    setCallingNext(true)
+    try {
+      await queueApi.updateTicketStatus(nextTicket.id, 'serving')
+      await fetchQueue()
+    } catch (err) {
+      alert(`Failed to call ticket: ${err.message}`)
+    } finally {
+      setCallingNext(false)
+    }
+  }
 
   // Filter products by selected category
   const filteredProducts = selectedCategoryId
@@ -165,22 +203,57 @@ export default function StaffPOS() {
   return (
     <div className="h-screen flex flex-col bg-stone-bg">
       {/* Header */}
-      <header className="bg-white border-b border-stone-line p-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">Staff Counter</h1>
-            <p className="text-sm text-charcoal/60">
-              {profile?.full_name || profile?.fullName || 'Staff User'} • {new Date().toLocaleDateString()}
-            </p>
+      <header className="bg-white border-b border-stone-line px-4 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-4">
+            <div>
+              <h1 className="text-xl font-bold leading-tight">Staff Counter POS</h1>
+              <p className="text-xs text-charcoal/60">
+                {profile?.full_name || profile?.fullName || 'Staff User'} • {new Date().toLocaleDateString()}
+              </p>
+            </div>
+
+            {/* Live Queue Calling Widget */}
+            <div className="flex items-center gap-2 bg-stone-bg border border-stone-line rounded-lg px-3 py-1.5 shadow-2xs">
+              <div className="text-xs">
+                <span className="text-charcoal/60">Now Serving:</span>{' '}
+                <strong className="text-oxblood font-extrabold text-sm ml-1">
+                  {queueData?.nowServing || '---'}
+                </strong>
+              </div>
+              <span className="text-stone-line">•</span>
+              <div className="text-xs text-charcoal/70">
+                Waiting: <strong className="text-charcoal">{queueData?.totalWaiting || 0}</strong>
+              </div>
+              <button
+                type="button"
+                onClick={handleCallNextTicket}
+                disabled={callingNext || !queueData?.totalWaiting}
+                className="btn-primary text-xs py-1 px-2.5 ml-1 disabled:opacity-40 shadow-2xs"
+                title="Advance queue and serve next ticket"
+              >
+                {callingNext ? 'Calling...' : '📢 Call Next'}
+              </button>
+            </div>
           </div>
-          <div className="flex items-center gap-3">
+
+          <div className="flex items-center gap-2">
+            {profile?.role === 'owner' && (
+              <button
+                type="button"
+                onClick={() => navigate('/owner')}
+                className="btn-secondary text-xs py-1.5 px-3 flex items-center gap-1.5"
+              >
+                <span>📊</span> Owner Portal
+              </button>
+            )}
             <button
               onClick={() => setView(view === 'pos' ? 'history' : 'pos')}
-              className="btn-secondary"
+              className="btn-secondary text-xs py-1.5 px-3"
             >
               {view === 'pos' ? '📋 Order History' : '🛒 Back to POS'}
             </button>
-            <button onClick={signOut} className="btn-secondary">
+            <button onClick={signOut} className="btn-secondary text-xs py-1.5 px-3">
               Sign Out
             </button>
           </div>

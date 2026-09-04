@@ -6,11 +6,32 @@ import { env } from '../config/env.js'
 let dbInstance = null
 
 export function getDatabase(customPath) {
-  if (dbInstance && !customPath) {
+  if (customPath) {
+    if (dbInstance) {
+      try {
+        dbInstance.close()
+      } catch {
+        // ignore already closed
+      }
+    }
+    const dbPath = customPath
+    if (dbPath !== ':memory:') {
+      const dir = path.dirname(path.resolve(dbPath))
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true })
+      }
+    }
+    dbInstance = new DatabaseSync(dbPath)
+    dbInstance.exec('PRAGMA foreign_keys = ON;')
+    dbInstance.exec('PRAGMA journal_mode = WAL;')
     return dbInstance
   }
 
-  const dbPath = customPath || (env.NODE_ENV === 'test' ? ':memory:' : env.DB_PATH)
+  if (dbInstance) {
+    return dbInstance
+  }
+
+  const dbPath = env.NODE_ENV === 'test' ? ':memory:' : env.DB_PATH
 
   if (dbPath !== ':memory:') {
     const dir = path.dirname(path.resolve(dbPath))
@@ -23,10 +44,7 @@ export function getDatabase(customPath) {
   db.exec('PRAGMA foreign_keys = ON;')
   db.exec('PRAGMA journal_mode = WAL;')
 
-  if (!customPath) {
-    dbInstance = db
-  }
-
+  dbInstance = db
   return db
 }
 

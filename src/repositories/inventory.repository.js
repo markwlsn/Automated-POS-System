@@ -1,8 +1,12 @@
 import { getDatabase } from '../db/index.js'
 
 export class InventoryRepository {
-  constructor(db = getDatabase()) {
-    this.db = db
+  constructor(db = null) {
+    this._db = db
+  }
+
+  get db() {
+    return this._db || getDatabase()
   }
 
   getBranchInventory(branchId) {

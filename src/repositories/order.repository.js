@@ -1,10 +1,15 @@
 import crypto from 'node:crypto'
 import { getDatabase } from '../db/index.js'
 import { generateOrderNumber, generateReceiptNumber } from '../utils/orderHelpers.js'
+import { ORDER_RULES, ERROR_CODES } from '../config/constants.js'
 
 export class OrderRepository {
-  constructor(db = getDatabase()) {
-    this.db = db
+  constructor(db = null) {
+    this._db = db
+  }
+
+  get db() {
+    return this._db || getDatabase()
   }
 
   getOrders({ branchId = null, date = null, search = null, limit = 50 }) {
@@ -159,6 +164,39 @@ export class OrderRepository {
     this.db.exec('BEGIN TRANSACTION;')
 
     try {
+      // Step 0: Enforce daily order limits (store rules)
+      const branchDailyStmt = this.db.prepare(`
+        SELECT COUNT(*) as count
+        FROM orders
+        WHERE branch_id = ? AND date(created_at) = date('now')
+      `)
+      const branchDailyOrders = branchDailyStmt.get(branchId)?.count || 0
+      if (branchDailyOrders >= ORDER_RULES.MAX_DAILY_BRANCH_ORDERS) {
+        const err = new Error(
+          `Daily branch order capacity limit of ${ORDER_RULES.MAX_DAILY_BRANCH_ORDERS} orders reached for today`
+        )
+        err.code = ERROR_CODES.DAILY_ORDER_LIMIT_REACHED
+        err.status = 400
+        throw err
+      }
+
+      if (customerId) {
+        const custDailyStmt = this.db.prepare(`
+          SELECT COUNT(*) as count
+          FROM orders
+          WHERE customer_id = ? AND date(created_at) = date('now')
+        `)
+        const custDailyOrders = custDailyStmt.get(customerId)?.count || 0
+        if (custDailyOrders >= ORDER_RULES.MAX_DAILY_CUSTOMER_ORDERS) {
+          const err = new Error(
+            `Daily customer order limit of ${ORDER_RULES.MAX_DAILY_CUSTOMER_ORDERS} orders reached for today`
+          )
+          err.code = ERROR_CODES.CUSTOMER_DAILY_LIMIT_REACHED
+          err.status = 400
+          throw err
+        }
+      }
+
       // Step 1: Validate stock & fetch fresh pricing for all items
       let totalAmount = 0.0
       const processedItems = []
@@ -214,6 +252,25 @@ export class OrderRepository {
       }
 
       totalAmount = Math.round(totalAmount * 100) / 100
+
+      // Enforce POS shop order value limits
+      if (totalAmount < ORDER_RULES.MIN_ORDER_AMOUNT) {
+        const err = new Error(
+          `Order total ₱${totalAmount.toFixed(2)} is below minimum allowed order amount of ₱${ORDER_RULES.MIN_ORDER_AMOUNT.toFixed(2)}`
+        )
+        err.code = ERROR_CODES.ORDER_BELOW_MINIMUM
+        err.status = 400
+        throw err
+      }
+
+      if (totalAmount > ORDER_RULES.MAX_ORDER_AMOUNT) {
+        const err = new Error(
+          `Order total ₱${totalAmount.toFixed(2)} exceeds maximum allowed transaction limit of ₱${ORDER_RULES.MAX_ORDER_AMOUNT.toFixed(2)}`
+        )
+        err.code = ERROR_CODES.ORDER_EXCEEDS_MAXIMUM
+        err.status = 400
+        throw err
+      }
 
       // Step 2: Validate cash payment if applicable
       let change = 0.0

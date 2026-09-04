@@ -1,11 +1,17 @@
 import { Router } from 'express'
-import { createOrder, getOrders, getOrderById } from '../controllers/order.controller.js'
+import { createOrder, getOrders, getOrderById, getOrderRules } from '../controllers/order.controller.js'
 import { authenticateToken, requireRole } from '../middleware/auth.middleware.js'
 import { validateBody } from '../middleware/validate.middleware.js'
 import { ROLES } from '../config/constants.js'
 import { createOrderSchema } from './schemas.js'
 
 export const orderRouter = Router()
+
+// POS Shop Rules (open to authenticated or kiosk clients)
+orderRouter.get(
+  '/orders/rules',
+  getOrderRules
+)
 
 orderRouter.post(
   '/orders',
