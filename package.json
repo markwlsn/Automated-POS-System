@@ -9,6 +9,7 @@
     "dev": "node --watch src/server.js",
     "test": "node --test --test-concurrency=1 tests/**/*.test.js",
     "lint": "oxlint src",
+    "verify": "npm test && npm run lint",
     "db:migrate": "node scripts/migrate.js",
     "db:seed": "node scripts/seed.js",
     "test:supabase": "node scripts/test-supabase.js"
