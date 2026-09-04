@@ -43,6 +43,7 @@ export default function StaffPOS() {
   const [completedOrder, setCompletedOrder] = useState(null)
   const [queueData, setQueueData] = useState(null)
   const [callingNext, setCallingNext] = useState(false)
+  const [showHelpModal, setShowHelpModal] = useState(false)
 
   useEffect(() => {
     fetchQueue()
@@ -238,6 +239,14 @@ export default function StaffPOS() {
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowHelpModal(true)}
+              className="btn-secondary text-xs py-1.5 px-3 flex items-center gap-1 text-charcoal/70 hover:text-charcoal"
+              title="Keyboard shortcuts and counter policies"
+            >
+              <span>ℹ️</span> Shortcuts & Rules
+            </button>
             {profile?.role === 'owner' && (
               <button
                 type="button"
@@ -413,6 +422,66 @@ export default function StaffPOS() {
           <div className="bg-white rounded-lg p-8 text-center">
             <div className="w-16 h-16 border-4 border-oxblood border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
             <div className="text-lg font-semibold">Processing Order...</div>
+          </div>
+        </div>
+      )}
+
+      {/* Shortcuts & Rules Help Modal */}
+      {showHelpModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden border border-stone-line animate-in fade-in zoom-in-95 duration-150">
+            <div className="p-4 border-b border-stone-line flex items-center justify-between bg-stone-card">
+              <h3 className="font-bold text-base text-charcoal flex items-center gap-2">
+                <span>ℹ️</span> Cashier Guide & Store Rules
+              </h3>
+              <button
+                onClick={() => setShowHelpModal(false)}
+                className="w-7 h-7 rounded-full hover:bg-stone-bg text-charcoal/50 hover:text-charcoal flex items-center justify-center font-bold"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="p-5 space-y-4 text-xs">
+              <div>
+                <h4 className="font-bold text-sm text-charcoal mb-2">⌨️ Keypad Shortcuts</h4>
+                <div className="grid grid-cols-2 gap-2 text-charcoal/80">
+                  <div className="p-2 bg-stone-bg rounded border border-stone-line">
+                    <kbd className="font-mono font-bold">0 - 9</kbd>: Type weight
+                  </div>
+                  <div className="p-2 bg-stone-bg rounded border border-stone-line">
+                    <kbd className="font-mono font-bold">.</kbd>: Decimal point
+                  </div>
+                  <div className="p-2 bg-stone-bg rounded border border-stone-line">
+                    <kbd className="font-mono font-bold">Backspace</kbd>: Delete
+                  </div>
+                  <div className="p-2 bg-stone-bg rounded border border-stone-line">
+                    <kbd className="font-mono font-bold">Enter</kbd>: Confirm item
+                  </div>
+                  <div className="p-2 bg-stone-bg rounded border border-stone-line col-span-2">
+                    <kbd className="font-mono font-bold">Esc</kbd>: Cancel keypad / close modal
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <h4 className="font-bold text-sm text-charcoal mb-2">⚖️ Store Operational Rules</h4>
+                <ul className="space-y-1.5 text-charcoal/70 list-disc list-inside">
+                  <li><strong>Minimum Order:</strong> ₱50.00 required per ticket</li>
+                  <li><strong>Maximum Order:</strong> ₱50,000.00 transaction limit</li>
+                  <li><strong>Weight Bounds:</strong> 0.05 kg (50g) to 100 kg</li>
+                  <li><strong>Daily Capacity:</strong> 500 branch orders / 10 orders per customer</li>
+                </ul>
+              </div>
+
+              <div className="pt-2 text-right">
+                <button
+                  onClick={() => setShowHelpModal(false)}
+                  className="btn-primary text-xs py-2 px-4"
+                >
+                  Got It
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
