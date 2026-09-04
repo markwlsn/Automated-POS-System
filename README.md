@@ -122,14 +122,44 @@ npm audit --omit=dev
 
 ## 🔑 Demo Credentials
 
-| Role | Email | Password | Assigned Branch |
+| Role | Email | Password | Portal / Access |
 | --- | --- | --- | --- |
-| **Owner** | `owner@test.com` | `Password123!` | Dela Cruz Meat Shop (All) |
-| **Staff** | `staff@test.com` | `Password123!` | Main Branch - Poblacion |
-| **Customer** | `customer@test.com` | `Password123!` | Online / Kiosk |
+| **Owner** | `owner@test.com` | `Password123!` | Analytics Dashboard, inventory controls, POS rules (`/owner`) |
+| **Staff** | `staff@test.com` | `Password123!` | Counter POS, scale input, queue calling (`/staff`) |
+| **Customer** | `customer@test.com` | `Password123!` | Digital queue ticket dispenser, fresh meat price board (`/shop`) |
 
 ---
 
-## 📖 API Documentation
+## ⚖️ POS Store Rules & Operational Laws
 
-Detailed endpoint request/response contracts, schemas, error codes, and examples are documented in [docs/API.md](docs/API.md).
+The system enforces retail limits across both backend repositories and frontend checkout:
+
+- **Minimum Order Amount**: ₱50.00 per transaction
+- **Maximum Order Amount**: ₱50,000.00 per transaction
+- **Daily Branch Capacity**: 500 orders/day per branch
+- **Customer Daily Cap**: 10 orders/day per registered customer
+- **Weight Bounds**: 0.05 kg (50g) to 100.0 kg per line item
+
+---
+
+## 💻 Running in VS Code Integrated Terminal
+
+1. **Terminal 1 (Backend API)**:
+   ```powershell
+   npm run dev
+   ```
+2. **Terminal 2 (Frontend UI)**:
+   ```powershell
+   cd frontend
+   npm run dev
+   ```
+3. Open your browser to **http://localhost:5173**.
+
+---
+
+## 📖 Documentation & Architecture
+
+- [System Architecture](docs/ARCHITECTURE.md)
+- [POS Operational Rules](docs/POS_RULES.md)
+- [API Specifications](docs/API.md)
+- [Quality Assurance Plan](docs/QA_PLAN.md)
