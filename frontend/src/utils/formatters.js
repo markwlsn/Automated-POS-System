@@ -128,3 +128,43 @@ export function parseWeight(weightStr) {
   const kg = parseFloat(cleaned)
   return isNaN(kg) ? 0 : kg
 }
+
+/**
+ * Determine the stock state label and styling classification
+ * @param {number} stockKg - Current stock weight in kg
+ * @param {number} thresholdKg - Low stock threshold in kg
+ * @returns {{ label: string, status: 'out_of_stock' | 'low_stock' | 'in_stock' }}
+ */
+export function getStockStatus(stockKg, thresholdKg = 5.0) {
+  const stock = Number(stockKg || 0)
+  const threshold = Number(thresholdKg || 5.0)
+
+  if (stock <= 0) {
+    return { label: 'OUT OF STOCK', status: 'out_of_stock' }
+  }
+  if (stock < threshold) {
+    return { label: 'LOW STOCK', status: 'low_stock' }
+  }
+  return { label: 'IN STOCK', status: 'in_stock' }
+}
+
+/**
+ * Returns formatted badge text for order status
+ * @param {string} status - Order status ('completed', 'cancelled', 'pending', etc.)
+ * @returns {string} Human-friendly display label
+ */
+export function formatOrderStatus(status) {
+  if (!status) return 'Unknown'
+  switch (status.toLowerCase()) {
+    case 'completed':
+      return 'PAID / COMPLETED'
+    case 'cancelled':
+      return 'CANCELLED'
+    case 'pending':
+      return 'PENDING'
+    case 'preparing':
+      return 'PREPARING'
+    default:
+      return status.toUpperCase()
+  }
+}
