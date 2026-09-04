@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ordersApi } from '../api/client'
+import { ordersApi } from '../api/client.js'
 import { CURRENT_BRANCH_ID } from '../config'
 
 /**
@@ -17,7 +17,7 @@ export function useOrderSubmit() {
   /**
    * Submit order with all related records via single API request
    * @param {Object} orderData - Order submission data
-   * @returns {Object} { success, order, receipt, error }
+   * @returns {Object} { success, order, receipt, payment, error }
    */
   async function submitOrder(orderData) {
     const {
@@ -63,14 +63,21 @@ export function useOrderSubmit() {
       // Map response to match existing UI component property casing
       const formattedOrder = {
         ...result.order,
+        orderNumber: result.order.orderNumber,
         order_number: result.order.orderNumber,
+        totalAmount: result.order.totalAmount,
         total_amount: result.order.totalAmount,
+        paymentMethod: result.order.paymentMethod,
+        payment_method: result.order.paymentMethod,
+        createdAt: result.order.createdAt,
         created_at: result.order.createdAt,
       }
 
       const formattedReceipt = {
         ...result.receipt,
+        receiptNumber: result.receipt.receiptNumber,
         receipt_number: result.receipt.receiptNumber,
+        issuedAt: result.receipt.issuedAt,
         issued_at: result.receipt.issuedAt,
       }
 

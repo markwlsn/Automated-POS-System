@@ -1,4 +1,4 @@
-﻿import CartItemRow from './CartItemRow'
+import CartItemRow from './CartItemRow'
 import CartEmpty from './CartEmpty'
 import { formatCurrency, formatWeight } from '../utils/formatters'
 
@@ -13,15 +13,17 @@ import { formatCurrency, formatWeight } from '../utils/formatters'
  * @param {Function} onCheckout - Callback when proceeding to payment
  * @param {number} totalWeight - Total weight of all items
  * @param {number} totalAmount - Total amount of all items
+ * @param {Function} getStockForProduct - Callback to query max stock per product
  */
 export default function CartSummary({
-  cart,
+  cart = [],
   onUpdateWeight,
   onRemoveItem,
   onClearCart,
   onCheckout,
-  totalWeight,
-  totalAmount,
+  totalWeight = 0,
+  totalAmount = 0,
+  getStockForProduct,
 }) {
   const itemCount = cart.length
   const isEmpty = itemCount === 0
@@ -57,6 +59,7 @@ export default function CartSummary({
               <CartItemRow
                 key={item.id}
                 item={item}
+                maxStock={getStockForProduct ? getStockForProduct(item.product.id) : undefined}
                 onUpdateWeight={onUpdateWeight}
                 onRemove={onRemoveItem}
               />

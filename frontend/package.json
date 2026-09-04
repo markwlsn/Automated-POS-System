@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "oxlint src",
-    "test": "node src/utils/__tests__/formatters.test.js",
+    "test": "node --test tests/**/*.test.js src/utils/__tests__/*.test.js",
     "preview": "vite preview"
   },
   "dependencies": {

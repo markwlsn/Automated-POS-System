@@ -1,4 +1,4 @@
-﻿import { formatCurrency, formatDateTime, formatWeight } from '../utils/formatters'
+import { formatCurrency, formatDateTime, formatWeight } from '../utils/formatters'
 
 /**
  * ReceiptModal - Display order receipt with print functionality
@@ -9,15 +9,21 @@
  * @param {Function} onClose - Callback when modal is closed
  * @param {Function} onNewOrder - Callback to start a new order
  */
-export default function ReceiptModal({ order, receipt, orderItems, onClose, onNewOrder }) {
+export default function ReceiptModal({ order = {}, receipt = {}, orderItems = [], onClose, onNewOrder }) {
   function handlePrint() {
     window.print()
   }
 
   function handleNewOrder() {
-    onNewOrder()
-    onClose()
+    if (onNewOrder) onNewOrder()
+    if (onClose) onClose()
   }
+
+  const receiptNumber = receipt?.receipt_number || receipt?.receiptNumber || 'N/A'
+  const orderNumber = order?.order_number || order?.orderNumber || 'N/A'
+  const orderDate = order?.created_at || order?.createdAt || new Date().toISOString()
+  const paymentMethod = String(order?.payment_method || order?.paymentMethod || 'cash').replace('_', ' ')
+  const totalAmount = Number(order?.total_amount ?? order?.totalAmount ?? 0)
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -30,7 +36,7 @@ export default function ReceiptModal({ order, receipt, orderItems, onClose, onNe
             </svg>
           </div>
           <h2 className="text-2xl font-bold mb-2">Order Complete!</h2>
-          <p className="text-charcoal/60">Receipt #{receipt.receipt_number}</p>
+          <p className="text-charcoal/60">Receipt #{receiptNumber}</p>
         </div>
 
         {/* Receipt Content - Printable */}
@@ -45,19 +51,19 @@ export default function ReceiptModal({ order, receipt, orderItems, onClose, onNe
           <div className="border-t border-b border-charcoal/20 py-3 mb-4 text-sm space-y-1">
             <div className="flex justify-between">
               <span className="text-charcoal/60">Receipt No:</span>
-              <span className="font-medium">{receipt.receipt_number}</span>
+              <span className="font-medium">{receiptNumber}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-charcoal/60">Order No:</span>
-              <span className="font-medium">{order.order_number}</span>
+              <span className="font-medium">{orderNumber}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-charcoal/60">Date:</span>
-              <span className="font-medium">{formatDateTime(order.created_at)}</span>
+              <span className="font-medium">{formatDateTime(orderDate)}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-charcoal/60">Payment:</span>
-              <span className="font-medium uppercase">{order.payment_method.replace('_', ' ')}</span>
+              <span className="font-medium uppercase">{paymentMethod}</span>
             </div>
           </div>
 
@@ -73,14 +79,21 @@ export default function ReceiptModal({ order, receipt, orderItems, onClose, onNe
                 </tr>
               </thead>
               <tbody>
-                {orderItems.map((item, index) => (
-                  <tr key={index} className="border-b border-charcoal/10">
-                    <td className="py-2">{item.product_name || item.product?.name || 'Item'}</td>
-                    <td className="py-2 text-right">{formatWeight(item.weight_kg, false)}</td>
-                    <td className="py-2 text-right text-xs">{formatCurrency(item.unit_price)}/kg</td>
-                    <td className="py-2 text-right font-medium">{formatCurrency(item.subtotal)}</td>
-                  </tr>
-                ))}
+                {(orderItems || []).map((item, index) => {
+                  const weight = Number(item.weight_kg ?? item.weightKg ?? 0)
+                  const unitPrice = Number(item.unit_price ?? item.unitPrice ?? 0)
+                  const subtotal = Number(item.subtotal ?? 0)
+                  const name = item.product_name || item.productName || item.product?.name || 'Item'
+
+                  return (
+                    <tr key={index} className="border-b border-charcoal/10">
+                      <td className="py-2">{name}</td>
+                      <td className="py-2 text-right">{formatWeight(weight, false)}</td>
+                      <td className="py-2 text-right text-xs">{formatCurrency(unitPrice)}/kg</td>
+                      <td className="py-2 text-right font-medium">{formatCurrency(subtotal)}</td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
@@ -89,11 +102,11 @@ export default function ReceiptModal({ order, receipt, orderItems, onClose, onNe
           <div className="border-t-2 border-charcoal/20 pt-3 space-y-2">
             <div className="flex justify-between text-sm">
               <span className="text-charcoal/60">Subtotal</span>
-              <span className="font-medium">{formatCurrency(order.total_amount)}</span>
+              <span className="font-medium">{formatCurrency(totalAmount)}</span>
             </div>
             <div className="flex justify-between text-lg font-bold">
               <span>Total</span>
-              <span>{formatCurrency(order.total_amount)}</span>
+              <span>{formatCurrency(totalAmount)}</span>
             </div>
           </div>
 

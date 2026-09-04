@@ -1,4 +1,4 @@
-﻿/**
+/**
  * StockBadge - Visual indicator for product stock status
  * Shows color-coded badge based on stock level vs threshold
  * 
@@ -8,9 +8,10 @@
  * @param {boolean} showText - Whether to show text label (default: true)
  */
 export default function StockBadge({ stockKg, thresholdKg, size = 'md', showText = true }) {
-  // Determine stock status
-  const isOutOfStock = stockKg <= 0
-  const isLowStock = stockKg > 0 && stockKg < thresholdKg
+  const safeStock = Number(stockKg || 0)
+  const safeThreshold = Number(thresholdKg || 5)
+  const isOutOfStock = safeStock <= 0
+  const isLowStock = safeStock > 0 && safeStock < safeThreshold
 
   // Size classes
   const sizeClasses = {
@@ -30,13 +31,13 @@ export default function StockBadge({ stockKg, thresholdKg, size = 'md', showText
     lowStock: {
       className: 'bg-mustard/10 text-mustard-dark border border-mustard/30',
       text: 'Low Stock',
-      ariaLabel: `Low stock: ${stockKg.toFixed(2)}kg remaining`,
+      ariaLabel: `Low stock: ${safeStock.toFixed(2)}kg remaining`,
       icon: '▲',
     },
     inStock: {
       className: 'bg-sage/10 text-sage-dark border border-sage/30',
       text: 'In Stock',
-      ariaLabel: `In stock: ${stockKg.toFixed(2)}kg available`,
+      ariaLabel: `In stock: ${safeStock.toFixed(2)}kg available`,
       icon: '✓',
     },
   }

@@ -147,20 +147,47 @@ export function getDateRange(date) {
  * @returns {Object} { sufficient: boolean, insufficientItems: Array }
  */
 export function checkInventorySufficiency(cartItems, inventory) {
+  if (!Array.isArray(cartItems) || cartItems.length === 0) {
+    return { sufficient: true, insufficientItems: [] }
+  }
+
   const insufficientItems = []
-  
+  const invList = Array.isArray(inventory) ? inventory : []
+
+  // Aggregate cart weights per product to validate cumulative demand
+  const requiredWeights = new Map()
   for (const item of cartItems) {
-    const stock = inventory.find(inv => inv.product_id === item.product.id)
-    
-    if (!stock || stock.stock_kg < item.weight_kg) {
+    const productId = item.productId || item.product_id || item.product?.id
+    const weight = Number(item.weightKg ?? item.weight_kg ?? 0)
+    const productName = item.productName || item.product?.name || 'Product'
+
+    if (!productId) continue
+
+    if (requiredWeights.has(productId)) {
+      const existing = requiredWeights.get(productId)
+      existing.weight += weight
+    } else {
+      requiredWeights.set(productId, { productId, productName, weight })
+    }
+  }
+
+  for (const [productId, req] of requiredWeights.entries()) {
+    const stockRecord = invList.find(
+      inv => (inv.productId || inv.product_id) === productId
+    )
+
+    const available = Number(stockRecord?.stockKg ?? stockRecord?.stock_kg ?? 0)
+
+    if (req.weight > available) {
       insufficientItems.push({
-        productName: item.product.name,
-        required: item.weight_kg,
-        available: stock?.stock_kg || 0,
+        productId,
+        productName: req.productName,
+        required: req.weight,
+        available,
       })
     }
   }
-  
+
   return {
     sufficient: insufficientItems.length === 0,
     insufficientItems,

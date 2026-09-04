@@ -1,5 +1,33 @@
 import { useState, useEffect } from 'react'
-import { productsApi } from '../api/client'
+import { productsApi } from '../api/client.js'
+
+/**
+ * Normalizes product object to ensure consistent property names across components
+ */
+export function normalizeProduct(product) {
+  if (!product) return null
+  const price = Number(product.price_per_kg ?? product.pricePerKg ?? 0)
+  const category = product.category || {
+    id: product.category_id || product.categoryId,
+    name: product.category_name || product.categoryName || 'Uncategorized',
+    sort_order: product.category_sort_order ?? product.categorySortOrder ?? 0,
+  }
+
+  return {
+    ...product,
+    price_per_kg: price,
+    pricePerKg: price,
+    category: {
+      ...category,
+      id: category.id,
+      name: category.name,
+      sort_order: category.sort_order ?? category.sortOrder ?? 0,
+      sortOrder: category.sortOrder ?? category.sort_order ?? 0,
+    },
+    stock_kg: Number(product.stock_kg ?? product.stockKg ?? 0),
+    stockKg: Number(product.stockKg ?? product.stock_kg ?? 0),
+  }
+}
 
 /**
  * Custom hook to fetch and manage products with categories
@@ -31,12 +59,20 @@ export function useProducts() {
         productsApi.getProducts(),
       ])
 
-      setCategories(fetchedCategories || [])
-      setProducts(fetchedProducts || [])
+      const normalizedCategories = (fetchedCategories || []).map(cat => ({
+        ...cat,
+        sort_order: cat.sortOrder ?? cat.sort_order ?? 0,
+        sortOrder: cat.sortOrder ?? cat.sort_order ?? 0,
+      }))
+
+      const normalizedProducts = (fetchedProducts || []).map(normalizeProduct)
+
+      setCategories(normalizedCategories)
+      setProducts(normalizedProducts)
 
       // Group products by category
       const grouped = {}
-      for (const product of fetchedProducts || []) {
+      for (const product of normalizedProducts) {
         const categoryName = product.category?.name || 'Uncategorized'
         if (!grouped[categoryName]) {
           grouped[categoryName] = []
@@ -89,7 +125,7 @@ export function useProduct(productId) {
 
       try {
         const data = await productsApi.getProductById(productId)
-        setProduct(data)
+        setProduct(normalizeProduct(data))
       } catch (err) {
         console.error('Error fetching product from API:', err)
         setError(err)

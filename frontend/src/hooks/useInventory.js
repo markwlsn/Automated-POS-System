@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { inventoryApi } from '../api/client'
+import { inventoryApi } from '../api/client.js'
 import { CURRENT_BRANCH_ID } from '../config'
 
 /**

@@ -3,7 +3,7 @@
  * Enforces single API boundary: Browser -> Backend API -> Database
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api/v1'
+const API_BASE_URL = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) || (typeof process !== 'undefined' && process.env?.VITE_API_BASE_URL) || 'http://localhost:3000/api/v1'
 
 const TOKEN_KEY = 'pos_auth_token'
 

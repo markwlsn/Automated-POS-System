@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { calculateSubtotal } from '../utils/orderHelpers'
 
 /**
@@ -50,8 +50,9 @@ export function useCart() {
       return
     }
 
-    const unitPrice = product.price_per_kg
-    const subtotal = calculateSubtotal(weightKg, unitPrice)
+    const unitPrice = Number(product.price_per_kg ?? product.pricePerKg ?? 0)
+    const weight = Number(weightKg)
+    const subtotal = calculateSubtotal(weight, unitPrice)
 
     // Check if product already in cart
     const existingIndex = cart.findIndex(item => item.product.id === product.id)
@@ -59,7 +60,7 @@ export function useCart() {
     if (existingIndex >= 0) {
       // Update existing item - add to existing weight
       const updatedCart = [...cart]
-      const newWeight = updatedCart[existingIndex].weight_kg + weightKg
+      const newWeight = Math.round((updatedCart[existingIndex].weight_kg + weight) * 100) / 100
       updatedCart[existingIndex] = {
         ...updatedCart[existingIndex],
         weight_kg: newWeight,
@@ -70,8 +71,12 @@ export function useCart() {
       // Add new item
       const newItem = {
         id: `${product.id}-${Date.now()}`, // Unique cart item ID
-        product,
-        weight_kg: weightKg,
+        product: {
+          ...product,
+          price_per_kg: unitPrice,
+          pricePerKg: unitPrice,
+        },
+        weight_kg: weight,
         unit_price: unitPrice,
         subtotal,
       }
@@ -90,13 +95,15 @@ export function useCart() {
       return
     }
 
+    const weight = Number(newWeightKg)
+
     setCart(prevCart => 
       prevCart.map(item => {
         if (item.id === cartItemId) {
           return {
             ...item,
-            weight_kg: newWeightKg,
-            subtotal: calculateSubtotal(newWeightKg, item.unit_price),
+            weight_kg: weight,
+            subtotal: calculateSubtotal(weight, item.unit_price),
           }
         }
         return item
@@ -130,14 +137,24 @@ export function useCart() {
    * Get total weight of all items
    */
   function getTotalWeight() {
-    return cart.reduce((total, item) => total + item.weight_kg, 0)
+    return Math.round(cart.reduce((total, item) => total + (item.weight_kg || 0), 0) * 100) / 100
   }
 
   /**
    * Get total amount of all items
    */
   function getTotalAmount() {
-    return cart.reduce((total, item) => total + item.subtotal, 0)
+    return Math.round(cart.reduce((total, item) => total + (item.subtotal || 0), 0) * 100) / 100
+  }
+
+  /**
+   * Get total weight currently in cart for a specific product ID
+   * @param {string} productId - Product UUID
+   * @returns {number} Committed weight in cart
+   */
+  function getCartWeightForProduct(productId) {
+    const item = cart.find(i => i.product?.id === productId)
+    return item ? item.weight_kg : 0
   }
 
   /**
@@ -156,6 +173,7 @@ export function useCart() {
     getItemCount,
     getTotalWeight,
     getTotalAmount,
+    getCartWeightForProduct,
     isEmpty,
   }
 }

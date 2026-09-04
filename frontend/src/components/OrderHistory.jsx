@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { ordersApi } from '../api/client'
+import { ordersApi } from '../api/client.js'
 import { CURRENT_BRANCH_ID } from '../config'
 import { formatCurrency, formatDateTime } from '../utils/formatters'
 import ReceiptModal from './ReceiptModal'

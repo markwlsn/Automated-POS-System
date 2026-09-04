@@ -1,4 +1,4 @@
-﻿import { useState } from 'react'
+import { useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { useProducts } from '../../hooks/useProducts'
 import { useInventory } from '../../hooks/useInventory'
@@ -15,9 +15,9 @@ import ReceiptModal from '../../components/ReceiptModal'
 import OrderHistory from '../../components/OrderHistory'
 
 export default function StaffPOS() {
-  const { profile, signOut } = useAuth()
+  const { profile, user, signOut } = useAuth()
   const { products, categories, loading: productsLoading } = useProducts()
-  const { inventory, getStockForProduct } = useInventory()
+  const { inventory, getStockForProduct, refetch: refetchInventory } = useInventory()
   const {
     cart,
     addItem,
@@ -26,6 +26,7 @@ export default function StaffPOS() {
     clearCart,
     getTotalWeight,
     getTotalAmount,
+    getCartWeightForProduct,
   } = useCart()
   const { submitOrder, submitting } = useOrderSubmit()
 
@@ -42,24 +43,46 @@ export default function StaffPOS() {
     ? products.filter(p => p.category?.id === selectedCategoryId)
     : products
 
-  // Handle product selection
+  // Handle product selection with cumulative stock validation
   function handleProductSelect(product) {
-    const stockKg = getStockForProduct(product.id)
-    if (stockKg <= 0) {
+    const totalStockKg = getStockForProduct(product.id)
+    if (totalStockKg <= 0) {
       alert(`${product.name} is out of stock`)
       return
     }
+
+    const cartWeight = getCartWeightForProduct(product.id)
+    const remainingAvailable = totalStockKg - cartWeight
+
+    if (remainingAvailable <= 0) {
+      alert(
+        `All available stock of ${product.name} (${totalStockKg.toFixed(2)}kg) is already added to your current order.`
+      )
+      return
+    }
+
     setSelectedProduct(product)
     setShowWeightKeypad(true)
   }
 
-  // Handle weight confirmation
+  // Handle weight confirmation with cumulative cart weight validation
   function handleWeightConfirm(weightKg) {
-    const stockKg = getStockForProduct(selectedProduct.id)
-    if (weightKg > stockKg) {
-      alert(`Insufficient stock. Only ${stockKg.toFixed(2)}kg available`)
+    if (!selectedProduct) return
+
+    const totalStockKg = getStockForProduct(selectedProduct.id)
+    const cartWeight = getCartWeightForProduct(selectedProduct.id)
+    const cumulativeWeight = Math.round((cartWeight + weightKg) * 100) / 100
+
+    if (cumulativeWeight > totalStockKg) {
+      const remainingAvailable = Math.max(0, totalStockKg - cartWeight)
+      alert(
+        `Insufficient stock for ${selectedProduct.name}.\n` +
+        `Only ${remainingAvailable.toFixed(2)}kg remaining available.\n` +
+        `(Total stock: ${totalStockKg.toFixed(2)}kg, already in cart: ${cartWeight.toFixed(2)}kg)`
+      )
       return
     }
+
     addItem(selectedProduct, weightKg)
     setShowWeightKeypad(false)
     setSelectedProduct(null)
@@ -82,12 +105,14 @@ export default function StaffPOS() {
 
   // Handle payment confirmation
   async function handlePaymentConfirm(paymentData) {
+    const staffId = profile?.id || user?.id || null
+
     const orderData = {
       cart,
       paymentMethod: selectedPaymentMethod,
       paymentReference: paymentData,
       customerId: null,
-      createdBy: profile.id,
+      createdBy: staffId,
       orderType: 'walk_in',
       fulfillmentType: 'pickup',
     }
@@ -97,8 +122,11 @@ export default function StaffPOS() {
     if (result.success) {
       const orderItems = cart.map(item => ({
         product_name: item.product.name,
+        productName: item.product.name,
         weight_kg: item.weight_kg,
+        weightKg: item.weight_kg,
         unit_price: item.unit_price,
+        unitPrice: item.unit_price,
         subtotal: item.subtotal,
       }))
 
@@ -111,6 +139,11 @@ export default function StaffPOS() {
       clearCart()
       setCheckoutStep(null)
       setSelectedPaymentMethod(null)
+
+      // Immediately refresh inventory so product cards show updated stock
+      if (typeof refetchInventory === 'function') {
+        refetchInventory()
+      }
     } else {
       alert(`Order failed: ${result.error}`)
     }
@@ -137,7 +170,7 @@ export default function StaffPOS() {
           <div>
             <h1 className="text-2xl font-bold">Staff Counter</h1>
             <p className="text-sm text-charcoal/60">
-              {profile?.full_name} • {new Date().toLocaleDateString()}
+              {profile?.full_name || profile?.fullName || 'Staff User'} • {new Date().toLocaleDateString()}
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -174,18 +207,25 @@ export default function StaffPOS() {
               <div className="flex-1 overflow-y-auto p-6">
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                   {filteredProducts.map(product => {
-                    const stockKg = getStockForProduct(product.id)
-                    const inventoryItem = inventory.find(inv => inv.product_id === product.id)
-                    const thresholdKg = inventoryItem?.low_stock_threshold_kg || 5
+                    const totalStock = getStockForProduct(product.id)
+                    const cartWeight = getCartWeightForProduct(product.id)
+                    const remainingAvailable = Math.max(0, totalStock - cartWeight)
+
+                    const inventoryItem = (inventory || []).find(
+                      inv => (inv.product_id || inv.productId) === product.id
+                    )
+                    const thresholdKg = Number(
+                      inventoryItem?.low_stock_threshold_kg ?? inventoryItem?.lowStockThresholdKg ?? 5
+                    )
 
                     return (
                       <ProductCard
                         key={product.id}
                         product={product}
-                        stockKg={stockKg}
+                        stockKg={remainingAvailable}
                         thresholdKg={thresholdKg}
                         onClick={handleProductSelect}
-                        disabled={stockKg <= 0}
+                        disabled={remainingAvailable <= 0}
                       />
                     )
                   })}
@@ -203,6 +243,7 @@ export default function StaffPOS() {
                 onCheckout={handleCheckout}
                 totalWeight={getTotalWeight()}
                 totalAmount={getTotalAmount()}
+                getStockForProduct={getStockForProduct}
               />
             </div>
           </div>
@@ -217,6 +258,8 @@ export default function StaffPOS() {
               <h3 className="font-semibold text-lg">{selectedProduct.name}</h3>
               <p className="text-sm text-charcoal/60">
                 Stock: {getStockForProduct(selectedProduct.id).toFixed(2)}kg available
+                {getCartWeightForProduct(selectedProduct.id) > 0 &&
+                  ` (${getCartWeightForProduct(selectedProduct.id).toFixed(2)}kg already in cart)`}
               </p>
             </div>
             <WeightKeypad

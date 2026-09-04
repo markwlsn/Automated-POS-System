@@ -1,4 +1,4 @@
-﻿import { useState } from 'react'
+import { useState } from 'react'
 import { formatCurrency, formatWeight } from '../utils/formatters'
 import WeightKeypad from './WeightKeypad'
 
@@ -7,16 +7,25 @@ import WeightKeypad from './WeightKeypad'
  * Shows product info with inline weight editing via modal keypad
  * 
  * @param {Object} item - Cart item object
+ * @param {number} maxStock - Maximum available stock in kilograms
  * @param {Function} onUpdateWeight - Callback to update weight (itemId, newWeight)
  * @param {Function} onRemove - Callback to remove item (itemId)
  */
-export default function CartItemRow({ item, onUpdateWeight, onRemove }) {
+export default function CartItemRow({ item, maxStock, onUpdateWeight, onRemove }) {
   const [showKeypad, setShowKeypad] = useState(false)
 
   function handleWeightConfirm(newWeight) {
+    if (maxStock !== undefined && newWeight > maxStock) {
+      alert(`Insufficient stock. Only ${Number(maxStock).toFixed(2)}kg available`)
+      return
+    }
     onUpdateWeight(item.id, newWeight)
     setShowKeypad(false)
   }
+
+  const unitPrice = Number(item.unit_price ?? item.unitPrice ?? item.product?.price_per_kg ?? item.product?.pricePerKg ?? 0)
+  const weight = Number(item.weight_kg ?? item.weightKg ?? 0)
+  const subtotal = Number(item.subtotal ?? 0)
 
   return (
     <>
@@ -25,7 +34,7 @@ export default function CartItemRow({ item, onUpdateWeight, onRemove }) {
         <div className="flex-1 min-w-0">
           <div className="font-medium text-sm truncate">{item.product.name}</div>
           <div className="text-xs text-charcoal/60">
-            {formatCurrency(item.unit_price)}/kg
+            {formatCurrency(unitPrice)}/kg
           </div>
         </div>
 
@@ -35,12 +44,12 @@ export default function CartItemRow({ item, onUpdateWeight, onRemove }) {
           className="px-3 py-1.5 bg-charcoal/5 hover:bg-charcoal/10 rounded text-sm font-medium transition-colors"
           aria-label={`Edit weight for ${item.product.name}`}
         >
-          {formatWeight(item.weight_kg)}
+          {formatWeight(weight)}
         </button>
 
         {/* Subtotal */}
         <div className="text-sm font-semibold min-w-[80px] text-right">
-          {formatCurrency(item.subtotal)}
+          {formatCurrency(subtotal)}
         </div>
 
         {/* Remove Button */}
@@ -61,10 +70,12 @@ export default function CartItemRow({ item, onUpdateWeight, onRemove }) {
           <div className="bg-stone-bg rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-auto">
             <div className="sticky top-0 bg-stone-card border-b border-stone-line p-4">
               <h3 className="font-semibold text-lg">{item.product.name}</h3>
-              <p className="text-sm text-charcoal/60">Adjust weight</p>
+              <p className="text-sm text-charcoal/60">
+                Adjust weight {maxStock !== undefined ? `(Max: ${Number(maxStock).toFixed(2)}kg)` : ''}
+              </p>
             </div>
             <WeightKeypad
-              initialWeight={item.weight_kg}
+              initialWeight={weight}
               onConfirm={handleWeightConfirm}
               onCancel={() => setShowKeypad(false)}
             />
