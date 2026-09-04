@@ -10,6 +10,8 @@ import {
   formatDateTime,
   formatPhoneNumber,
   parseWeight,
+  getStockStatus,
+  formatOrderStatus,
 } from '../formatters.js'
 
 // Test formatCurrency
@@ -51,6 +53,20 @@ console.assert(
   'Should format Philippine mobile number'
 )
 console.assert(formatPhoneNumber('') === '', 'Should handle empty string')
+console.groupEnd()
+
+// Test getStockStatus
+console.group('getStockStatus tests')
+console.assert(getStockStatus(0, 5).status === 'out_of_stock', '0 kg should be out of stock')
+console.assert(getStockStatus(3.5, 5).status === 'low_stock', '3.5 kg with threshold 5 should be low stock')
+console.assert(getStockStatus(15, 5).status === 'in_stock', '15 kg with threshold 5 should be in stock')
+console.groupEnd()
+
+// Test formatOrderStatus
+console.group('formatOrderStatus tests')
+console.assert(formatOrderStatus('completed') === 'PAID / COMPLETED', 'completed should format to PAID / COMPLETED')
+console.assert(formatOrderStatus('cancelled') === 'CANCELLED', 'cancelled should format to CANCELLED')
+console.assert(formatOrderStatus('pending') === 'PENDING', 'pending should format to PENDING')
 console.groupEnd()
 
 console.log('✅ All formatter tests passed!')
