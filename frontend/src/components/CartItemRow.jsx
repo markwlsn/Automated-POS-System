@@ -66,16 +66,37 @@ export default function CartItemRow({ item, maxStock, onUpdateWeight, onRemove }
 
       {/* Weight Keypad Modal */}
       {showKeypad && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-stone-bg rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-auto">
-            <div className="sticky top-0 bg-stone-card border-b border-stone-line p-4">
-              <h3 className="font-semibold text-lg">{item.product.name}</h3>
-              <p className="text-sm text-charcoal/60">
-                Adjust weight {maxStock !== undefined ? `(Max: ${Number(maxStock).toFixed(2)}kg)` : ''}
-              </p>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden border border-stone-line my-auto animate-in fade-in zoom-in-95 duration-150">
+            <div className="px-5 py-3.5 border-b border-stone-line flex items-center justify-between bg-white">
+              <div>
+                <h3 className="font-bold text-lg text-charcoal">{item.product.name}</h3>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className="text-xs font-bold text-oxblood">
+                    ₱{unitPrice.toFixed(2)}/kg
+                  </span>
+                  {maxStock !== undefined && (
+                    <>
+                      <span className="text-stone-line">•</span>
+                      <span className="text-xs text-charcoal/60">
+                        Max Stock: {Number(maxStock).toFixed(2)}kg
+                      </span>
+                    </>
+                  )}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowKeypad(false)}
+                className="w-8 h-8 rounded-full hover:bg-stone-bg text-charcoal/50 hover:text-charcoal flex items-center justify-center text-lg font-bold transition-colors"
+                aria-label="Close"
+              >
+                ✕
+              </button>
             </div>
             <WeightKeypad
               initialWeight={weight}
+              productPrice={unitPrice}
               onConfirm={handleWeightConfirm}
               onCancel={() => setShowKeypad(false)}
             />

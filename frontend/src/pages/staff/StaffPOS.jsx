@@ -252,18 +252,41 @@ export default function StaffPOS() {
 
       {/* Modals */}
       {showWeightKeypad && selectedProduct && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md h-[600px]">
-            <div className="p-4 border-b border-stone-line">
-              <h3 className="font-semibold text-lg">{selectedProduct.name}</h3>
-              <p className="text-sm text-charcoal/60">
-                Stock: {getStockForProduct(selectedProduct.id).toFixed(2)}kg available
-                {getCartWeightForProduct(selectedProduct.id) > 0 &&
-                  ` (${getCartWeightForProduct(selectedProduct.id).toFixed(2)}kg already in cart)`}
-              </p>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden border border-stone-line my-auto animate-in fade-in zoom-in-95 duration-150">
+            {/* Modal Header */}
+            <div className="px-5 py-3.5 border-b border-stone-line flex items-center justify-between bg-white">
+              <div className="pr-2">
+                <h3 className="font-bold text-lg text-charcoal leading-tight">
+                  {selectedProduct.name}
+                </h3>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-xs font-bold text-oxblood">
+                    ₱{Number(selectedProduct.price_per_kg || selectedProduct.pricePerKg || 0).toFixed(2)}/kg
+                  </span>
+                  <span className="text-stone-line">•</span>
+                  <span className="text-xs text-charcoal/60">
+                    Avail: {Math.max(0, getStockForProduct(selectedProduct.id) - getCartWeightForProduct(selectedProduct.id)).toFixed(2)}kg
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowWeightKeypad(false)
+                  setSelectedProduct(null)
+                }}
+                className="w-8 h-8 rounded-full hover:bg-stone-bg text-charcoal/50 hover:text-charcoal flex items-center justify-center text-lg font-bold transition-colors shrink-0"
+                aria-label="Close modal"
+              >
+                ✕
+              </button>
             </div>
+
+            {/* Modal Keypad Content */}
             <WeightKeypad
               initialWeight={0}
+              productPrice={selectedProduct.price_per_kg || selectedProduct.pricePerKg}
               onConfirm={handleWeightConfirm}
               onCancel={() => {
                 setShowWeightKeypad(false)
